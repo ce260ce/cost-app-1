@@ -1,0 +1,1739 @@
+"use client"
+
+import { useState } from "react"
+
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { NumberInput } from "@/components/ui/number-input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Textarea } from "@/components/ui/textarea"
+import { toast } from "sonner"
+import type { AppActions } from "@/lib/app-data"
+import { formatCurrency } from "@/lib/calculations"
+import { currencyOptions } from "@/lib/constants"
+import type {
+  AppData,
+  CategoryLarge,
+  CategoryMedium,
+  CategorySmall,
+  Equipment,
+  LaborRole,
+  Material,
+  PackagingItem,
+  ShippingMethod,
+} from "@/lib/types"
+import { RegisteredList } from "../shared/ui"
+
+interface MasterTabProps {
+  data: AppData
+  actions: AppActions
+}
+
+function MasterRegisterView({ data, actions }: MasterTabProps) {
+  const [largeCategory, setLargeCategory] = useState<Omit<CategoryLarge, "id">>({ name: "", description: "" })
+  const [mediumCategory, setMediumCategory] = useState<Omit<CategoryMedium, "id">>({
+    name: "",
+    description: "",
+    largeId: "",
+  })
+  const [smallCategory, setSmallCategory] = useState<Omit<CategorySmall, "id">>({
+    name: "",
+    description: "",
+    mediumId: "",
+  })
+
+  const [materialForm, setMaterialForm] = useState<Omit<Material, "id">>({
+    name: "",
+    unit: "kg",
+    sizeDescription: "",
+    currency: "JPY",
+    unitCost: 0,
+    supplier: "",
+    note: "",
+  })
+
+  const [packagingForm, setPackagingForm] = useState<Omit<PackagingItem, "id">>({
+    name: "",
+    unit: "set",
+    sizeDescription: "",
+    currency: "JPY",
+    unitCost: 0,
+    note: "",
+  })
+
+  const [laborForm, setLaborForm] = useState<Omit<LaborRole, "id">>({
+    name: "",
+    hourlyRate: 1800,
+    currency: "JPY",
+    note: "",
+  })
+
+  const [equipmentForm, setEquipmentForm] = useState<Omit<Equipment, "id">>({
+    name: "",
+    acquisitionCost: 0,
+    currency: "JPY",
+    amortizationYears: 5,
+    note: "",
+  })
+
+  const [shippingMethodForm, setShippingMethodForm] = useState<Omit<ShippingMethod, "id">>({
+    name: "",
+    description: "",
+    unitCost: 0,
+    currency: "JPY",
+    note: "",
+  })
+
+  const {
+    addLargeCategory,
+    addMediumCategory,
+    addSmallCategory,
+    addMaterial,
+    addPackagingItem,
+    addLaborRole,
+    addEquipment,
+    addShippingMethod,
+  } = actions
+
+  const largeOptions = data.categories.large
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>カテゴリマスタ</CardTitle>
+            <CardDescription>大・中・小カテゴリを事前登録し、商品登録時に選択できるようにします。</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <form
+              className="space-y-2"
+              onSubmit={(event) => {
+                event.preventDefault()
+                if (!largeCategory.name.trim()) return
+                addLargeCategory({ ...largeCategory })
+                setLargeCategory({ name: "", description: "" })
+              }}
+            >
+              <Label className="text-sm font-semibold">大カテゴリ</Label>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">名称</Label>
+                <Input
+                  placeholder="例: アパレル"
+                  value={largeCategory.name}
+                  onChange={(event) => setLargeCategory((prev) => ({ ...prev, name: event.target.value }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">概要 (任意)</Label>
+                <Textarea
+                  placeholder="概要"
+                  value={largeCategory.description}
+                  onChange={(event) => setLargeCategory((prev) => ({ ...prev, description: event.target.value }))}
+                />
+              </div>
+              <Button type="submit" size="sm">
+                追加
+              </Button>
+            </form>
+
+            <form
+              className="space-y-2"
+              onSubmit={(event) => {
+                event.preventDefault()
+                if (!mediumCategory.name.trim() || !mediumCategory.largeId) return
+                addMediumCategory({ ...mediumCategory })
+                setMediumCategory({ name: "", description: "", largeId: "" })
+              }}
+            >
+              <Label className="text-sm font-semibold">中カテゴリ</Label>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">親カテゴリ</Label>
+                <Select
+                  value={mediumCategory.largeId}
+                  onValueChange={(value) => setMediumCategory((prev) => ({ ...prev, largeId: value }))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="親カテゴリ" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {largeOptions.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">名称</Label>
+                <Input
+                  placeholder="例: トート"
+                  value={mediumCategory.name}
+                  onChange={(event) => setMediumCategory((prev) => ({ ...prev, name: event.target.value }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">概要 (任意)</Label>
+                <Textarea
+                  placeholder="概要"
+                  value={mediumCategory.description}
+                  onChange={(event) => setMediumCategory((prev) => ({ ...prev, description: event.target.value }))}
+                />
+              </div>
+              <Button type="submit" size="sm" disabled={!data.categories.large.length}>
+                追加
+              </Button>
+            </form>
+
+            <form
+              className="space-y-2"
+              onSubmit={(event) => {
+                event.preventDefault()
+                if (!smallCategory.name.trim() || !smallCategory.mediumId) return
+                addSmallCategory({ ...smallCategory })
+                setSmallCategory({ name: "", description: "", mediumId: "" })
+              }}
+            >
+              <Label className="text-sm font-semibold">小カテゴリ</Label>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">親 (中カテゴリ)</Label>
+                <Select value={smallCategory.mediumId} onValueChange={(value) => setSmallCategory((prev) => ({ ...prev, mediumId: value }))}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="親 (中カテゴリ)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {data.categories.medium.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">名称</Label>
+                <Input
+                  placeholder="例: ミニトート"
+                  value={smallCategory.name}
+                  onChange={(event) => setSmallCategory((prev) => ({ ...prev, name: event.target.value }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">概要 (任意)</Label>
+                <Textarea
+                  placeholder="概要"
+                  value={smallCategory.description}
+                  onChange={(event) => setSmallCategory((prev) => ({ ...prev, description: event.target.value }))}
+                />
+              </div>
+              <Button type="submit" size="sm" disabled={!data.categories.medium.length}>
+                追加
+              </Button>
+            </form>
+
+            <RegisteredList
+              title="登録済み 大カテゴリ"
+              items={data.categories.large.map((category) => `${category.name}${category.description ? ` / ${category.description}` : ""}`)}
+            />
+            <RegisteredList
+              title="登録済み 中カテゴリ"
+              items={data.categories.medium.map((category) => {
+                const parent = data.categories.large.find((c) => c.id === category.largeId)?.name ?? "-"
+                return `${parent} › ${category.name}`
+              })}
+            />
+            <RegisteredList
+              title="登録済み 小カテゴリ"
+              items={data.categories.small.map((category) => {
+                const parent = data.categories.medium.find((c) => c.id === category.mediumId)?.name ?? "-"
+                return `${parent} › ${category.name}`
+              })}
+            />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>材料マスタ</CardTitle>
+            <CardDescription>名称・単位・サイズ・仕入先まで登録し、材料コスト入力時に再利用します。</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <form
+              className="grid gap-2"
+              onSubmit={(event) => {
+                event.preventDefault()
+                if (!materialForm.name.trim()) return
+                addMaterial({ ...materialForm })
+                setMaterialForm({
+                  name: "",
+                  unit: "kg",
+                  sizeDescription: "",
+                  currency: "JPY",
+                  unitCost: 0,
+                  supplier: "",
+                  note: "",
+                })
+              }}
+            >
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">材料名</Label>
+                <Input
+                  placeholder="例: キャンバス生地"
+                  value={materialForm.name}
+                  onChange={(event) => setMaterialForm((prev) => ({ ...prev, name: event.target.value }))}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">単位</Label>
+                  <Input
+                    placeholder="例: m"
+                    value={materialForm.unit}
+                    onChange={(event) => setMaterialForm((prev) => ({ ...prev, unit: event.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">通貨</Label>
+                  <Select value={materialForm.currency} onValueChange={(value) => setMaterialForm((prev) => ({ ...prev, currency: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="通貨" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {currencyOptions.map((currency) => (
+                        <SelectItem key={currency} value={currency}>
+                          {currency}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">基準単価</Label>
+                <NumberInput
+                  placeholder="例: 320"
+                  value={materialForm.unitCost}
+                  onValueChange={(next) => setMaterialForm((prev) => ({ ...prev, unitCost: next === "" ? 0 : next }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">サイズ・容量</Label>
+                <Input
+                  placeholder="例: 50mロール"
+                  value={materialForm.sizeDescription}
+                  onChange={(event) => setMaterialForm((prev) => ({ ...prev, sizeDescription: event.target.value }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">仕入先</Label>
+                <Input
+                  placeholder="例: FabricMart"
+                  value={materialForm.supplier}
+                  onChange={(event) => setMaterialForm((prev) => ({ ...prev, supplier: event.target.value }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">備考</Label>
+                <Textarea
+                  placeholder="為替やメモ"
+                  value={materialForm.note}
+                  onChange={(event) => setMaterialForm((prev) => ({ ...prev, note: event.target.value }))}
+                />
+              </div>
+              <Button type="submit" size="sm">
+                追加
+              </Button>
+            </form>
+
+            <RegisteredList
+              title="登録済み 材料"
+              items={data.materials.map((material) => {
+                const supplier = material.supplier ? ` / ${material.supplier}` : ""
+                const unitCostText = formatCurrency(material.unitCost, material.currency)
+                return `${material.name} / ${unitCostText} / ${material.unit} / ${material.sizeDescription}${supplier}`
+              })}
+            />
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>梱包材マスタ</CardTitle>
+            <CardDescription>段ボールやフィルムなどを登録し、商品登録時に選べるようにします。</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <form
+              className="grid gap-2"
+              onSubmit={(event) => {
+                event.preventDefault()
+                if (!packagingForm.name.trim()) return
+                addPackagingItem({ ...packagingForm })
+                setPackagingForm({
+                  name: "",
+                  unit: "set",
+                  sizeDescription: "",
+                  currency: "JPY",
+                  unitCost: 0,
+                  note: "",
+                })
+              }}
+            >
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">梱包材名</Label>
+                <Input
+                  placeholder="例: 段ボールS"
+                  value={packagingForm.name}
+                  onChange={(event) => setPackagingForm((prev) => ({ ...prev, name: event.target.value }))}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">単位</Label>
+                  <Input
+                    placeholder="例: 枚"
+                    value={packagingForm.unit}
+                    onChange={(event) => setPackagingForm((prev) => ({ ...prev, unit: event.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">通貨</Label>
+                  <Select value={packagingForm.currency} onValueChange={(value) => setPackagingForm((prev) => ({ ...prev, currency: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="通貨" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {currencyOptions.map((currency) => (
+                        <SelectItem key={currency} value={currency}>
+                          {currency}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">サイズ/仕様</Label>
+                <Input
+                  placeholder="例: 320x250x120"
+                  value={packagingForm.sizeDescription}
+                  onChange={(event) => setPackagingForm((prev) => ({ ...prev, sizeDescription: event.target.value }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">基準単価</Label>
+                <NumberInput
+                  placeholder="例: 80"
+                  value={packagingForm.unitCost}
+                  onValueChange={(next) => setPackagingForm((prev) => ({ ...prev, unitCost: next === "" ? 0 : next }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">備考</Label>
+                <Textarea
+                  placeholder="仕入先や材質"
+                  value={packagingForm.note}
+                  onChange={(event) => setPackagingForm((prev) => ({ ...prev, note: event.target.value }))}
+                />
+              </div>
+              <Button type="submit" size="sm">
+                追加
+              </Button>
+            </form>
+
+            <RegisteredList
+              title="登録済み 梱包材"
+              items={data.packagingItems.map((item) => {
+                const unitCostText = formatCurrency(item.unitCost, item.currency)
+                return `${item.name} / ${unitCostText} / ${item.unit} / ${item.sizeDescription}`
+              })}
+            />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>配送方法マスタ</CardTitle>
+            <CardDescription>宅配便・メール便などの配送手段と送料を登録します。</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <form
+              className="grid gap-2"
+              onSubmit={(event) => {
+                event.preventDefault()
+                if (!shippingMethodForm.name.trim()) return
+                addShippingMethod({ ...shippingMethodForm })
+                setShippingMethodForm({
+                  name: "",
+                  description: "",
+                  unitCost: 0,
+                  currency: "JPY",
+                  note: "",
+                })
+              }}
+            >
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">配送方法名</Label>
+                <Input
+                  placeholder="例: 宅配便"
+                  value={shippingMethodForm.name}
+                  onChange={(event) => setShippingMethodForm((prev) => ({ ...prev, name: event.target.value }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">説明 (任意)</Label>
+                <Input
+                  placeholder="例: 100サイズ / 佐川"
+                  value={shippingMethodForm.description}
+                  onChange={(event) => setShippingMethodForm((prev) => ({ ...prev, description: event.target.value }))}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">基準単価</Label>
+                  <NumberInput
+                    placeholder="例: 180"
+                    value={shippingMethodForm.unitCost}
+                    onValueChange={(next) => setShippingMethodForm((prev) => ({ ...prev, unitCost: next === "" ? 0 : next }))}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">通貨</Label>
+                  <Select
+                    value={shippingMethodForm.currency}
+                    onValueChange={(value) => setShippingMethodForm((prev) => ({ ...prev, currency: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="通貨" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {currencyOptions.map((currency) => (
+                        <SelectItem key={currency} value={currency}>
+                          {currency}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">備考</Label>
+                <Textarea
+                  placeholder="例: 100サイズまで"
+                  value={shippingMethodForm.note}
+                  onChange={(event) => setShippingMethodForm((prev) => ({ ...prev, note: event.target.value }))}
+                />
+              </div>
+              <Button type="submit" size="sm">
+                追加
+              </Button>
+            </form>
+
+            <RegisteredList
+              title="登録済み 配送方法"
+              items={(data.shippingMethods ?? []).map((method) => {
+                const unitCostText = formatCurrency(method.unitCost, method.currency)
+                return `${method.name} / ${unitCostText}${method.description ? ` / ${method.description}` : ""}`
+              })}
+            />
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>人件費 / 設備マスタ</CardTitle>
+          <CardDescription>工数と時給、設備投資のベースをまとめて管理します。</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-6 md:grid-cols-2">
+          <form
+            className="grid gap-2"
+            onSubmit={(event) => {
+              event.preventDefault()
+              if (!laborForm.name.trim()) return
+              addLaborRole({ ...laborForm })
+              setLaborForm({ name: "", hourlyRate: 1800, currency: "JPY", note: "" })
+            }}
+          >
+            <Label className="text-sm font-semibold">人件費</Label>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">作業カテゴリ</Label>
+              <Input
+                placeholder="例: 裁断"
+                value={laborForm.name}
+                onChange={(event) => setLaborForm((prev) => ({ ...prev, name: event.target.value }))}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">時給</Label>
+                <NumberInput
+                  placeholder="例: 1800"
+                  value={laborForm.hourlyRate}
+                  onValueChange={(next) => setLaborForm((prev) => ({ ...prev, hourlyRate: next === "" ? 0 : next }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">通貨</Label>
+                <Select value={laborForm.currency} onValueChange={(value) => setLaborForm((prev) => ({ ...prev, currency: value }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="通貨" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {currencyOptions.map((currency) => (
+                      <SelectItem key={currency} value={currency}>
+                        {currency}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">備考</Label>
+              <Textarea
+                placeholder="例: 外部スタッフ"
+                value={laborForm.note}
+                onChange={(event) => setLaborForm((prev) => ({ ...prev, note: event.target.value }))}
+              />
+            </div>
+            <Button type="submit" size="sm">
+              人件費を追加
+            </Button>
+
+            <RegisteredList
+              title="登録済み 人件費"
+              items={data.laborRoles.map((role) => `${role.name} / ${formatCurrency(role.hourlyRate, role.currency)} / ${role.note || "備考なし"}`)}
+            />
+          </form>
+
+          <form
+            className="grid gap-2"
+            onSubmit={(event) => {
+              event.preventDefault()
+              if (!equipmentForm.name.trim()) return
+              addEquipment({ ...equipmentForm })
+              setEquipmentForm({ name: "", acquisitionCost: 0, currency: "JPY", amortizationYears: 5, note: "" })
+            }}
+          >
+            <Label className="text-sm font-semibold">設備投資</Label>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">設備名</Label>
+              <Input
+                placeholder="例: 工業用ミシン"
+                value={equipmentForm.name}
+                onChange={(event) => setEquipmentForm((prev) => ({ ...prev, name: event.target.value }))}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">取得額</Label>
+                <NumberInput
+                  placeholder="例: 400000"
+                  value={equipmentForm.acquisitionCost}
+                  onValueChange={(next) => setEquipmentForm((prev) => ({ ...prev, acquisitionCost: next === "" ? 0 : next }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">償却年数</Label>
+                <NumberInput
+                  placeholder="例: 5"
+                  value={equipmentForm.amortizationYears}
+                  onValueChange={(next) =>
+                    setEquipmentForm((prev) => ({ ...prev, amortizationYears: next === "" ? 0 : next }))
+                  }
+                />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">通貨</Label>
+              <Select value={equipmentForm.currency} onValueChange={(value) => setEquipmentForm((prev) => ({ ...prev, currency: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="通貨" />
+                </SelectTrigger>
+                <SelectContent>
+                  {currencyOptions.map((currency) => (
+                    <SelectItem key={currency} value={currency}>
+                      {currency}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">備考</Label>
+              <Textarea
+                placeholder="例: リース"
+                value={equipmentForm.note}
+                onChange={(event) => setEquipmentForm((prev) => ({ ...prev, note: event.target.value }))}
+              />
+            </div>
+            <Button type="submit" size="sm">
+              設備を追加
+            </Button>
+
+            <RegisteredList
+              title="登録済み 設備"
+              items={data.equipments.map((equipment) => `${equipment.name} / ${formatCurrency(equipment.acquisitionCost, equipment.currency)} / ${equipment.amortizationYears}年`)}
+            />
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+export function MasterTab({ data, actions }: MasterTabProps) {
+  const [view, setView] = useState<"register" | "list">("register")
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-end gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant={view === "register" ? "default" : "outline"}
+          onClick={() => setView("register")}
+        >
+          マスタ登録
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant={view === "list" ? "default" : "outline"}
+          onClick={() => setView("list")}
+        >
+          登録済みマスタ
+        </Button>
+      </div>
+
+      {view === "register" ? (
+        <MasterRegisterView data={data} actions={actions} />
+      ) : (
+        <MasterListView data={data} actions={actions} />
+      )}
+    </div>
+  )
+}
+
+function MasterListView({ data, actions }: MasterTabProps) {
+  const {
+    updateLargeCategory,
+    updateMediumCategory,
+    updateSmallCategory,
+    updateMaterial,
+    updatePackagingItem,
+    updateShippingMethod,
+    updateLaborRole,
+    updateEquipment,
+  } = actions
+
+  const [editingLarge, setEditingLarge] = useState({ id: null as string | null, name: "", description: "" })
+  const [editingMedium, setEditingMedium] = useState({
+    id: null as string | null,
+    name: "",
+    description: "",
+    largeId: "",
+  })
+  const [editingSmall, setEditingSmall] = useState({
+    id: null as string | null,
+    name: "",
+    description: "",
+    mediumId: "",
+  })
+  const [editingMaterial, setEditingMaterial] = useState<Omit<Material, "id"> & { id: string | null }>({
+    id: null,
+    name: "",
+    unit: "kg",
+    sizeDescription: "",
+    currency: "JPY",
+    unitCost: 0,
+    supplier: "",
+    note: "",
+  })
+  const [editingPackaging, setEditingPackaging] = useState<Omit<PackagingItem, "id"> & { id: string | null }>({
+    id: null,
+    name: "",
+    unit: "set",
+    sizeDescription: "",
+    currency: "JPY",
+    unitCost: 0,
+    note: "",
+  })
+  const [editingShipping, setEditingShipping] = useState<Omit<ShippingMethod, "id"> & { id: string | null }>({
+    id: null,
+    name: "",
+    description: "",
+    unitCost: 0,
+    currency: "JPY",
+    note: "",
+  })
+  const [editingLabor, setEditingLabor] = useState<Omit<LaborRole, "id"> & { id: string | null }>({
+    id: null,
+    name: "",
+    hourlyRate: 1800,
+    currency: "JPY",
+    note: "",
+  })
+  const [editingEquipment, setEditingEquipment] = useState<Omit<Equipment, "id"> & { id: string | null }>({
+    id: null,
+    name: "",
+    acquisitionCost: 0,
+    currency: "JPY",
+    amortizationYears: 5,
+    note: "",
+  })
+
+  const resetLarge = () => setEditingLarge({ id: null, name: "", description: "" })
+  const resetMedium = () => setEditingMedium({ id: null, name: "", description: "", largeId: "" })
+  const resetSmall = () => setEditingSmall({ id: null, name: "", description: "", mediumId: "" })
+  const resetMaterial = () =>
+    setEditingMaterial({ id: null, name: "", unit: "kg", sizeDescription: "", currency: "JPY", unitCost: 0, supplier: "", note: "" })
+  const resetPackaging = () =>
+    setEditingPackaging({ id: null, name: "", unit: "set", sizeDescription: "", currency: "JPY", unitCost: 0, note: "" })
+  const resetShipping = () => setEditingShipping({ id: null, name: "", description: "", unitCost: 0, currency: "JPY", note: "" })
+  const resetLabor = () => setEditingLabor({ id: null, name: "", hourlyRate: 1800, currency: "JPY", note: "" })
+  const resetEquipment = () =>
+    setEditingEquipment({ id: null, name: "", acquisitionCost: 0, currency: "JPY", amortizationYears: 5, note: "" })
+
+  const handleLargeSave = () => {
+    if (!editingLarge.id) return
+    const name = editingLarge.name.trim()
+    if (!name) return
+    updateLargeCategory({ id: editingLarge.id, name, description: editingLarge.description || undefined })
+    toast.success("大カテゴリを更新しました", { description: `「${name}」を更新しました。` })
+    resetLarge()
+  }
+
+  const handleMediumSave = () => {
+    if (!editingMedium.id || !editingMedium.largeId) return
+    const name = editingMedium.name.trim()
+    if (!name) return
+    updateMediumCategory({
+      id: editingMedium.id,
+      name,
+      description: editingMedium.description || undefined,
+      largeId: editingMedium.largeId,
+    })
+    toast.success("中カテゴリを更新しました", { description: `「${name}」を更新しました。` })
+    resetMedium()
+  }
+
+  const handleSmallSave = () => {
+    if (!editingSmall.id || !editingSmall.mediumId) return
+    const name = editingSmall.name.trim()
+    if (!name) return
+    updateSmallCategory({
+      id: editingSmall.id,
+      name,
+      description: editingSmall.description || undefined,
+      mediumId: editingSmall.mediumId,
+    })
+    toast.success("小カテゴリを更新しました", { description: `「${name}」を更新しました。` })
+    resetSmall()
+  }
+
+  const handleMaterialSave = () => {
+    const { id, ...rest } = editingMaterial
+    if (!id) return
+    const name = editingMaterial.name.trim()
+    if (!name) return
+    updateMaterial({ id, ...rest, name })
+    toast.success("材料を更新しました", {
+      description: `${name} / ${formatCurrency(editingMaterial.unitCost, editingMaterial.currency)}`,
+    })
+    resetMaterial()
+  }
+
+  const handlePackagingSave = () => {
+    const { id, ...rest } = editingPackaging
+    if (!id) return
+    const name = editingPackaging.name.trim()
+    if (!name) return
+    updatePackagingItem({ id, ...rest, name })
+    toast.success("梱包材を更新しました", {
+      description: `${name} / ${formatCurrency(editingPackaging.unitCost, editingPackaging.currency)}`,
+    })
+    resetPackaging()
+  }
+
+  const handleShippingSave = () => {
+    const { id, ...rest } = editingShipping
+    if (!id) return
+    const name = editingShipping.name.trim()
+    if (!name) return
+    updateShippingMethod({ id, ...rest, name })
+    toast.success("配送方法を更新しました", {
+      description: `${name} / ${formatCurrency(editingShipping.unitCost, editingShipping.currency)}`,
+    })
+    resetShipping()
+  }
+
+  const handleLaborSave = () => {
+    const { id, ...rest } = editingLabor
+    if (!id) return
+    const name = editingLabor.name.trim()
+    if (!name) return
+    updateLaborRole({ id, ...rest, name })
+    toast.success("人件費レートを更新しました", {
+      description: `${name} / ${formatCurrency(editingLabor.hourlyRate, editingLabor.currency)}`,
+    })
+    resetLabor()
+  }
+
+  const handleEquipmentSave = () => {
+    const { id, ...rest } = editingEquipment
+    if (!id) return
+    const name = editingEquipment.name.trim()
+    if (!name) return
+    updateEquipment({ id, ...rest, name })
+    toast.success("設備を更新しました", {
+      description: `${name} / ${formatCurrency(editingEquipment.acquisitionCost, editingEquipment.currency)}`,
+    })
+    resetEquipment()
+  }
+
+  const renderActionButtons = (onSave: () => void, onCancel: () => void) => (
+    <div className="flex gap-2">
+      <Button type="button" size="sm" onClick={onSave}>
+        保存
+      </Button>
+      <Button type="button" size="sm" variant="ghost" onClick={onCancel}>
+        キャンセル
+      </Button>
+    </div>
+  )
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>カテゴリ一覧</CardTitle>
+          <CardDescription>既存カテゴリをその場で編集できます。</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div>
+            <p className="mb-2 font-semibold">大カテゴリ</p>
+            {data.categories.large.length === 0 ? (
+              <p className="text-sm text-muted-foreground">まだ登録がありません。</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>名称</TableHead>
+                    <TableHead>概要</TableHead>
+                    <TableHead className="w-36">操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.categories.large.map((category) => {
+                    const isEditing = editingLarge.id === category.id
+                    return (
+                      <TableRow key={category.id}>
+                        <TableCell>
+                          {isEditing ? (
+                            <Input
+                              value={editingLarge.name}
+                              onChange={(event) => setEditingLarge((prev) => ({ ...prev, name: event.target.value }))}
+                            />
+                          ) : (
+                            category.name
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {isEditing ? (
+                            <Textarea
+                              value={editingLarge.description}
+                              onChange={(event) => setEditingLarge((prev) => ({ ...prev, description: event.target.value }))}
+                            />
+                          ) : (
+                            category.description || "-"
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {isEditing
+                            ? renderActionButtons(handleLargeSave, resetLarge)
+                            : (
+                                <Button type="button" size="sm" variant="outline" onClick={() => setEditingLarge({ id: category.id, name: category.name, description: category.description ?? "" })}>
+                                  編集
+                                </Button>
+                              )}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+
+          <div>
+            <p className="mb-2 font-semibold">中カテゴリ</p>
+            {data.categories.medium.length === 0 ? (
+              <p className="text-sm text-muted-foreground">まだ登録がありません。</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>名称</TableHead>
+                    <TableHead>親カテゴリ</TableHead>
+                    <TableHead>概要</TableHead>
+                    <TableHead className="w-36">操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.categories.medium.map((category) => {
+                    const isEditing = editingMedium.id === category.id
+                    const parentName = data.categories.large.find((c) => c.id === category.largeId)?.name ?? "-"
+                    return (
+                      <TableRow key={category.id}>
+                        <TableCell>
+                          {isEditing ? (
+                            <Input
+                              value={editingMedium.name}
+                              onChange={(event) => setEditingMedium((prev) => ({ ...prev, name: event.target.value }))}
+                            />
+                          ) : (
+                            category.name
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {isEditing ? (
+                            <Select
+                              value={editingMedium.largeId}
+                              onValueChange={(value) => setEditingMedium((prev) => ({ ...prev, largeId: value }))}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="親カテゴリ" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {data.categories.large.map((large) => (
+                                  <SelectItem key={large.id} value={large.id}>
+                                    {large.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            parentName
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {isEditing ? (
+                            <Textarea
+                              value={editingMedium.description}
+                              onChange={(event) => setEditingMedium((prev) => ({ ...prev, description: event.target.value }))}
+                            />
+                          ) : (
+                            category.description || "-"
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {isEditing
+                            ? renderActionButtons(handleMediumSave, resetMedium)
+                            : (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() =>
+                                    setEditingMedium({
+                                      id: category.id,
+                                      name: category.name,
+                                      description: category.description ?? "",
+                                      largeId: category.largeId,
+                                    })
+                                  }
+                                >
+                                  編集
+                                </Button>
+                              )}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+
+          <div>
+            <p className="mb-2 font-semibold">小カテゴリ</p>
+            {data.categories.small.length === 0 ? (
+              <p className="text-sm text-muted-foreground">まだ登録がありません。</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>名称</TableHead>
+                    <TableHead>親カテゴリ</TableHead>
+                    <TableHead>概要</TableHead>
+                    <TableHead className="w-36">操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.categories.small.map((category) => {
+                    const isEditing = editingSmall.id === category.id
+                    const parent = data.categories.medium.find((c) => c.id === category.mediumId)?.name ?? "-"
+                    return (
+                      <TableRow key={category.id}>
+                        <TableCell>
+                          {isEditing ? (
+                            <Input
+                              value={editingSmall.name}
+                              onChange={(event) => setEditingSmall((prev) => ({ ...prev, name: event.target.value }))}
+                            />
+                          ) : (
+                            category.name
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {isEditing ? (
+                            <Select
+                              value={editingSmall.mediumId}
+                              onValueChange={(value) => setEditingSmall((prev) => ({ ...prev, mediumId: value }))}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="親カテゴリ" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {data.categories.medium.map((medium) => (
+                                  <SelectItem key={medium.id} value={medium.id}>
+                                    {medium.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            parent
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {isEditing ? (
+                            <Textarea
+                              value={editingSmall.description}
+                              onChange={(event) => setEditingSmall((prev) => ({ ...prev, description: event.target.value }))}
+                            />
+                          ) : (
+                            category.description || "-"
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {isEditing
+                            ? renderActionButtons(handleSmallSave, resetSmall)
+                            : (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() =>
+                                    setEditingSmall({
+                                      id: category.id,
+                                      name: category.name,
+                                      description: category.description ?? "",
+                                      mediumId: category.mediumId,
+                                    })
+                                  }
+                                >
+                                  編集
+                                </Button>
+                              )}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>材料一覧</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data.materials.length === 0 ? (
+              <p className="text-sm text-muted-foreground">まだ登録がありません。</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>名称</TableHead>
+                    <TableHead>単位</TableHead>
+                    <TableHead>単価</TableHead>
+                    <TableHead>仕入先</TableHead>
+                    <TableHead>備考</TableHead>
+                    <TableHead className="w-36">操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.materials.map((material) => {
+                    const isEditing = editingMaterial.id === material.id
+                    return (
+                      <TableRow key={material.id}>
+                        <TableCell>
+                          {isEditing ? (
+                            <Input
+                              value={editingMaterial.name}
+                              onChange={(event) => setEditingMaterial((prev) => ({ ...prev, name: event.target.value }))}
+                            />
+                          ) : (
+                            material.name
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {isEditing ? (
+                            <Input
+                              value={editingMaterial.unit}
+                              onChange={(event) => setEditingMaterial((prev) => ({ ...prev, unit: event.target.value }))}
+                            />
+                          ) : (
+                            material.unit
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {isEditing ? (
+                            <div className="flex gap-2">
+                              <NumberInput
+                                value={editingMaterial.unitCost}
+                                onValueChange={(next) => setEditingMaterial((prev) => ({ ...prev, unitCost: next === "" ? 0 : next }))}
+                              />
+                              <Select
+                                value={editingMaterial.currency}
+                                onValueChange={(value) => setEditingMaterial((prev) => ({ ...prev, currency: value }))}
+                              >
+                                <SelectTrigger className="w-24">
+                                  <SelectValue placeholder="通貨" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {currencyOptions.map((currency) => (
+                                    <SelectItem key={currency} value={currency}>
+                                      {currency}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          ) : (
+                            formatCurrency(material.unitCost, material.currency)
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {isEditing ? (
+                            <Input
+                              value={editingMaterial.supplier}
+                              onChange={(event) => setEditingMaterial((prev) => ({ ...prev, supplier: event.target.value }))}
+                            />
+                          ) : (
+                            material.supplier || "-"
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {isEditing ? (
+                            <Textarea
+                              value={editingMaterial.note}
+                              onChange={(event) => setEditingMaterial((prev) => ({ ...prev, note: event.target.value }))}
+                            />
+                          ) : (
+                            material.note || "-"
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {isEditing
+                            ? renderActionButtons(handleMaterialSave, resetMaterial)
+                            : (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() =>
+                                    setEditingMaterial({
+                                      id: material.id,
+                                      name: material.name,
+                                      unit: material.unit,
+                                      sizeDescription: material.sizeDescription,
+                                      currency: material.currency,
+                                      unitCost: material.unitCost,
+                                      supplier: material.supplier ?? "",
+                                      note: material.note ?? "",
+                                    })
+                                  }
+                                >
+                                  編集
+                                </Button>
+                              )}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>梱包材一覧</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data.packagingItems.length === 0 ? (
+              <p className="text-sm text-muted-foreground">まだ登録がありません。</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>名称</TableHead>
+                    <TableHead>単位</TableHead>
+                    <TableHead>単価</TableHead>
+                    <TableHead>仕様</TableHead>
+                    <TableHead>備考</TableHead>
+                    <TableHead className="w-36">操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.packagingItems.map((item) => {
+                    const isEditing = editingPackaging.id === item.id
+                    return (
+                      <TableRow key={item.id}>
+                        <TableCell>
+                          {isEditing ? (
+                            <Input
+                              value={editingPackaging.name}
+                              onChange={(event) => setEditingPackaging((prev) => ({ ...prev, name: event.target.value }))}
+                            />
+                          ) : (
+                            item.name
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {isEditing ? (
+                            <Input
+                              value={editingPackaging.unit}
+                              onChange={(event) => setEditingPackaging((prev) => ({ ...prev, unit: event.target.value }))}
+                            />
+                          ) : (
+                            item.unit
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {isEditing ? (
+                            <div className="flex gap-2">
+                              <NumberInput
+                                value={editingPackaging.unitCost}
+                                onValueChange={(next) => setEditingPackaging((prev) => ({ ...prev, unitCost: next === "" ? 0 : next }))}
+                              />
+                              <Select
+                                value={editingPackaging.currency}
+                                onValueChange={(value) => setEditingPackaging((prev) => ({ ...prev, currency: value }))}
+                              >
+                                <SelectTrigger className="w-24">
+                                  <SelectValue placeholder="通貨" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {currencyOptions.map((currency) => (
+                                    <SelectItem key={currency} value={currency}>
+                                      {currency}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          ) : (
+                            formatCurrency(item.unitCost, item.currency)
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {isEditing ? (
+                            <Input
+                              value={editingPackaging.sizeDescription}
+                              onChange={(event) => setEditingPackaging((prev) => ({ ...prev, sizeDescription: event.target.value }))}
+                            />
+                          ) : (
+                            item.sizeDescription || "-"
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {isEditing ? (
+                            <Textarea
+                              value={editingPackaging.note}
+                              onChange={(event) => setEditingPackaging((prev) => ({ ...prev, note: event.target.value }))}
+                            />
+                          ) : (
+                            item.note || "-"
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {isEditing
+                            ? renderActionButtons(handlePackagingSave, resetPackaging)
+                            : (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() =>
+                                    setEditingPackaging({
+                                      id: item.id,
+                                      name: item.name,
+                                      unit: item.unit,
+                                      sizeDescription: item.sizeDescription,
+                                      currency: item.currency,
+                                      unitCost: item.unitCost,
+                                      note: item.note ?? "",
+                                    })
+                                  }
+                                >
+                                  編集
+                                </Button>
+                              )}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>配送方法一覧</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {(data.shippingMethods ?? []).length === 0 ? (
+              <p className="text-sm text-muted-foreground">まだ登録がありません。</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>名称</TableHead>
+                    <TableHead>説明</TableHead>
+                    <TableHead>単価</TableHead>
+                    <TableHead>備考</TableHead>
+                    <TableHead className="w-36">操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(data.shippingMethods ?? []).map((method) => {
+                    const isEditing = editingShipping.id === method.id
+                    return (
+                      <TableRow key={method.id}>
+                        <TableCell>
+                          {isEditing ? (
+                            <Input
+                              value={editingShipping.name}
+                              onChange={(event) => setEditingShipping((prev) => ({ ...prev, name: event.target.value }))}
+                            />
+                          ) : (
+                            method.name
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {isEditing ? (
+                            <Input
+                              value={editingShipping.description ?? ""}
+                              onChange={(event) => setEditingShipping((prev) => ({ ...prev, description: event.target.value }))}
+                            />
+                          ) : (
+                            method.description || "-"
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {isEditing ? (
+                            <div className="flex gap-2">
+                              <NumberInput
+                                value={editingShipping.unitCost}
+                                onValueChange={(next) => setEditingShipping((prev) => ({ ...prev, unitCost: next === "" ? 0 : next }))}
+                              />
+                              <Select
+                                value={editingShipping.currency}
+                                onValueChange={(value) => setEditingShipping((prev) => ({ ...prev, currency: value }))}
+                              >
+                                <SelectTrigger className="w-24">
+                                  <SelectValue placeholder="通貨" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {currencyOptions.map((currency) => (
+                                    <SelectItem key={currency} value={currency}>
+                                      {currency}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          ) : (
+                            formatCurrency(method.unitCost, method.currency)
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {isEditing ? (
+                            <Textarea
+                              value={editingShipping.note ?? ""}
+                              onChange={(event) => setEditingShipping((prev) => ({ ...prev, note: event.target.value }))}
+                            />
+                          ) : (
+                            method.note || "-"
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {isEditing
+                            ? renderActionButtons(handleShippingSave, resetShipping)
+                            : (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() =>
+                                    setEditingShipping({
+                                      id: method.id,
+                                      name: method.name,
+                                      description: method.description ?? "",
+                                      unitCost: method.unitCost,
+                                      currency: method.currency,
+                                      note: method.note ?? "",
+                                    })
+                                  }
+                                >
+                                  編集
+                                </Button>
+                              )}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>人件費一覧</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data.laborRoles.length === 0 ? (
+              <p className="text-sm text-muted-foreground">まだ登録がありません。</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>作業カテゴリ</TableHead>
+                    <TableHead>時給</TableHead>
+                    <TableHead>備考</TableHead>
+                    <TableHead className="w-36">操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.laborRoles.map((role) => {
+                    const isEditing = editingLabor.id === role.id
+                    return (
+                      <TableRow key={role.id}>
+                        <TableCell>
+                          {isEditing ? (
+                            <Input
+                              value={editingLabor.name}
+                              onChange={(event) => setEditingLabor((prev) => ({ ...prev, name: event.target.value }))}
+                            />
+                          ) : (
+                            role.name
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {isEditing ? (
+                            <div className="flex gap-2">
+                              <NumberInput
+                                value={editingLabor.hourlyRate}
+                                onValueChange={(next) => setEditingLabor((prev) => ({ ...prev, hourlyRate: next === "" ? 0 : next }))}
+                              />
+                              <Select
+                                value={editingLabor.currency}
+                                onValueChange={(value) => setEditingLabor((prev) => ({ ...prev, currency: value }))}
+                              >
+                                <SelectTrigger className="w-24">
+                                  <SelectValue placeholder="通貨" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {currencyOptions.map((currency) => (
+                                    <SelectItem key={currency} value={currency}>
+                                      {currency}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          ) : (
+                            formatCurrency(role.hourlyRate, role.currency)
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {isEditing ? (
+                            <Textarea
+                              value={editingLabor.note ?? ""}
+                              onChange={(event) => setEditingLabor((prev) => ({ ...prev, note: event.target.value }))}
+                            />
+                          ) : (
+                            role.note || "-"
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {isEditing
+                            ? renderActionButtons(handleLaborSave, resetLabor)
+                            : (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() =>
+                                    setEditingLabor({
+                                      id: role.id,
+                                      name: role.name,
+                                      hourlyRate: role.hourlyRate,
+                                      currency: role.currency,
+                                      note: role.note ?? "",
+                                    })
+                                  }
+                                >
+                                  編集
+                                </Button>
+                              )}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>設備一覧</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {data.equipments.length === 0 ? (
+            <p className="text-sm text-muted-foreground">まだ登録がありません。</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>名称</TableHead>
+                  <TableHead>取得額</TableHead>
+                  <TableHead>償却年数</TableHead>
+                  <TableHead>備考</TableHead>
+                  <TableHead className="w-36">操作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.equipments.map((equipment) => {
+                  const isEditing = editingEquipment.id === equipment.id
+                  return (
+                    <TableRow key={equipment.id}>
+                      <TableCell>
+                        {isEditing ? (
+                          <Input
+                            value={editingEquipment.name}
+                            onChange={(event) => setEditingEquipment((prev) => ({ ...prev, name: event.target.value }))}
+                          />
+                        ) : (
+                          equipment.name
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {isEditing ? (
+                          <div className="flex gap-2">
+                            <NumberInput
+                              value={editingEquipment.acquisitionCost}
+                              onValueChange={(next) =>
+                                setEditingEquipment((prev) => ({ ...prev, acquisitionCost: next === "" ? 0 : next }))
+                              }
+                            />
+                            <Select
+                              value={editingEquipment.currency}
+                              onValueChange={(value) => setEditingEquipment((prev) => ({ ...prev, currency: value }))}
+                            >
+                              <SelectTrigger className="w-24">
+                                <SelectValue placeholder="通貨" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {currencyOptions.map((currency) => (
+                                  <SelectItem key={currency} value={currency}>
+                                    {currency}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        ) : (
+                          formatCurrency(equipment.acquisitionCost, equipment.currency)
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {isEditing ? (
+                          <NumberInput
+                            value={editingEquipment.amortizationYears}
+                            onValueChange={(next) =>
+                              setEditingEquipment((prev) => ({ ...prev, amortizationYears: next === "" ? 0 : next }))
+                            }
+                          />
+                        ) : (
+                          `${equipment.amortizationYears}年`
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {isEditing ? (
+                          <Textarea
+                            value={editingEquipment.note ?? ""}
+                            onChange={(event) => setEditingEquipment((prev) => ({ ...prev, note: event.target.value }))}
+                          />
+                        ) : (
+                          equipment.note || "-"
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {isEditing
+                          ? renderActionButtons(handleEquipmentSave, resetEquipment)
+                          : (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                  setEditingEquipment({
+                                    id: equipment.id,
+                                    name: equipment.name,
+                                    acquisitionCost: equipment.acquisitionCost,
+                                    currency: equipment.currency,
+                                    amortizationYears: equipment.amortizationYears,
+                                    note: equipment.note ?? "",
+                                  })
+                                }
+                              >
+                                編集
+                              </Button>
+                            )}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
