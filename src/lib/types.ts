@@ -79,6 +79,7 @@ export type Product = {
   sizeVariants: ProductSizeVariant[]
   baseManHours: number
   defaultElectricityCost: number
+  salePrice: number
   registeredAt: string
   notes?: string
   productionLotSize: number
@@ -316,6 +317,7 @@ export const sampleAppData: AppData = {
       ],
       baseManHours: 1.5,
       defaultElectricityCost: 25,
+      salePrice: 8900,
       registeredAt: "2024-05-01",
       notes: "S/Mの2サイズ展開。金具変更や刺繍オプションあり。",
       productionLotSize: 50,

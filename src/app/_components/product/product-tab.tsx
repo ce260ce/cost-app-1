@@ -289,6 +289,7 @@ export function ProductTab({ data, actions, editingProductId, onRequestEditClear
     sizeVariants: [{ label: "", quantity: 0 }],
     baseManHours: 0,
     defaultElectricityCost: 0,
+    salePrice: 0,
     registeredAt: new Date().toISOString().slice(0, 10),
     notes: "",
     productionLotSize: 1,
@@ -387,6 +388,7 @@ export function ProductTab({ data, actions, editingProductId, onRequestEditClear
           : [{ label: "", quantity: 0 }],
       baseManHours: product.baseManHours,
       defaultElectricityCost: product.defaultElectricityCost,
+      salePrice: product.salePrice ?? 0,
       registeredAt: product.registeredAt,
       notes: product.notes ?? "",
       productionLotSize: product.productionLotSize,
@@ -570,6 +572,7 @@ export function ProductTab({ data, actions, editingProductId, onRequestEditClear
                       quantity: Number(productForm.expectedProduction.quantity) || 1,
                     },
                     defaultElectricityCost: Number(electricityUnitCost) || 0,
+                    salePrice: Number(productForm.salePrice) || 0,
                   }
                   if (editingProductId) {
                     removeProduct(editingProductId)

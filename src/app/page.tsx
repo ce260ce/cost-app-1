@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAppData } from "@/lib/app-data"
+import { calculateProductUnitCosts, formatCurrency } from "@/lib/calculations"
 import { MasterTab } from "./_components/master/master-tab"
 import { ProductTab } from "./_components/product/product-tab"
 import { CostTab } from "./_components/cost/cost-tab"
@@ -17,6 +18,13 @@ export default function Home() {
   const { data, hydrated, actions } = useAppData()
   const [activeTab, setActiveTab] = useState("cost")
   const [editingProductId, setEditingProductId] = useState<string | null>(null)
+  const productCostMap = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof calculateProductUnitCosts>>()
+    data.products.forEach((product) => {
+      map.set(product.id, calculateProductUnitCosts(product.id, data))
+    })
+    return map
+  }, [data])
 
   if (!hydrated) {
     return (
@@ -87,6 +95,8 @@ export default function Home() {
                       <TableHead>商品</TableHead>
                       <TableHead>カテゴリ</TableHead>
                       <TableHead>オプション/個数</TableHead>
+                      <TableHead>販売価格</TableHead>
+                      <TableHead>利益</TableHead>
                       <TableHead>備考</TableHead>
                       <TableHead />
                     </TableRow>
@@ -106,12 +116,19 @@ export default function Home() {
                         .map((variant) => `${variant.label}: ${variant.quantity}個`)
                         .join(" / ") || "-"
                       const notesText = product.notes?.trim() || "-"
+                      const unitCost = productCostMap.get(product.id)?.total ?? 0
+                      const salePrice = Number(product.salePrice ?? 0)
+                      const profit = salePrice - unitCost
 
                       return (
                         <TableRow key={product.id}>
                           <TableCell className="font-medium">{product.name}</TableCell>
                           <TableCell>{categoryPath}</TableCell>
                           <TableCell className="text-xs text-muted-foreground">{optionText}</TableCell>
+                          <TableCell>{formatCurrency(salePrice)}</TableCell>
+                          <TableCell className={profit >= 0 ? "text-green-600" : "text-red-600"}>
+                            {formatCurrency(profit)}
+                          </TableCell>
                           <TableCell className="text-xs text-muted-foreground">{notesText}</TableCell>
                           <TableCell className="w-20 text-right">
                             <Button

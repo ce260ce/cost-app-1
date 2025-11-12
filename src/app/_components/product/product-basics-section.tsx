@@ -242,6 +242,20 @@ export function ProductBasicsSection({ data, productForm, setProductForm, handle
         </div>
       </div>
       <div className="space-y-1">
+        <Label className="text-xs text-muted-foreground">販売価格 (1個あたり)</Label>
+        <NumberInput
+          placeholder="例: 9500"
+          value={productForm.salePrice}
+          onValueChange={(next) =>
+            setProductForm((prev) => ({
+              ...prev,
+              salePrice: next === "" ? 0 : next,
+            }))
+          }
+        />
+        <p className="text-xs text-muted-foreground">商品一覧で原価と合わせて粗利を表示します。</p>
+      </div>
+      <div className="space-y-1">
         <Label className="text-xs text-muted-foreground">使用する設備 (複数選択)</Label>
         <div className="flex flex-wrap gap-2 rounded-md border p-2">
           {data.equipments.map((equipment) => (
